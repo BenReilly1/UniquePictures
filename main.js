@@ -2,8 +2,10 @@ const argv = require('yargs').argv
 const FS   = require("fs");
 const Path = require("path");
 var ExifImage = require('exif').ExifImage;
+const { imageHash }= require('image-hash');
 
 let Files  = [];
+let CreateDate = [];
 
 // Gets all files, pushes found images into Files Array.
 // Called from main function
@@ -27,7 +29,7 @@ function ThroughDirectory(Directory) {
 }
 
 // Checks file extension, returns either true or false
-// Called from ThroughDirectory
+// Called from ThroughDirectory function
 function checkFiletype(fileName) {
     var fileExtensions = ['jpeg', 'jpg', 'gif', 'png', 'esp', 'ai', 'pdf', 'tiff', 'psd', 'eps', 'indd', 'raw']
     var getExtension = fileName.split('.')
@@ -35,23 +37,44 @@ function checkFiletype(fileName) {
     return fileExtensions.includes(extension);
 }
 
+// Extracts the meta data and goes to next function
+// Called from main function
 function extractMetadata(full) {
-    const meta = [];
     try {
         new ExifImage({ image : full }, function (error, exifData) {
             if (error) {
                 console.log('Error: '+error.message);
+                hashFile(full)
             } 
             hashFile(full, exifData.exif)
         });
     } catch (error) {
         console.log('Error: ' + error.message);
+        hashFile(full)
     }
 }
 
+// Hashes the file
+// Called from extractMetadata function
 function hashFile(full, meta) {
-    console.log(full)
-    console.log(meta.CreateDate)
+    // console.log(full)
+    // console.log(meta.CreateDate)
+    imageHash(full, 16, true, (error, data) => {
+        if (error) throw error;
+        // console.log(data);
+        var fullInformation = {
+            full,
+            crtDate: meta.CreateDate,
+            hash: data
+        }
+        checkHistory(fullInformation)
+    });
+}
+
+// Checks history of the file, same create date and hashes
+// Called from hashFile function
+function checkHistory(fileInformation) {
+    
 }
 
 function main() {

@@ -1,9 +1,14 @@
+// Execute using
+// node .\main.js --output="E:\OutPicture" --input="E:\Pictures\"
+
 const argv = require('yargs').argv
 const FS = require("fs");
 const Path = require("path");
 var ExifImage = require('exif').ExifImage;
 const { imageHash }= require('image-hash');
 const { copyFileSync } = require('fs')
+const crypto = require('crypto');
+
 
 let Files  = [];
 let CreateDate = [];
@@ -46,30 +51,47 @@ function extractMetadata(full) {
         new ExifImage({ image : full }, function (error, exifData) {
             if (error) {
                 console.log('Error: '+error.message);
-                originalNameCopy(full)
-            } 
+                checkHistNoMeta(full)
+            }
+            
             hashFile(full, exifData)
         });
     } catch (error) {
         console.log('Error: ' + error.message);
-        originalNameCopy(full)
+        checkHistNoMeta(full)
     }
 }
 
 // Hashes the file
 // Called from extractMetadata function
 function hashFile(full, meta) {
-    // console.log(full)
-    // console.log(meta.CreateDate)
+    if (meta === undefined) {
+        checkHistNoMeta(full)
+    } else {
+        imageHash(full, 16, true, (error, data) => {
+            if (error) throw error;
+            // console.log(data);
+            var fullInformation = {
+                full,
+                crtDate: meta.exif.CreateDate,
+                hash: data
+            }
+            checkHistory(fullInformation)
+        });
+    }
+}
+
+// Hashes and checks for previous hash.
+// Called from extractMegadata on errors
+function checkHistNoMeta(full) {
     imageHash(full, 16, true, (error, data) => {
         if (error) throw error;
-        // console.log(data);
-        var fullInformation = {
-            full,
-            crtDate: meta.exif.CreateDate,
-            hash: data
+        var previousHash = FileHashes.includes(data)
+        if (!previousHash) {
+
+        } else {
+            duplicateFile(full)
         }
-        checkHistory(fullInformation)
     });
 }
 
@@ -83,8 +105,22 @@ function checkHistory(fileInformation) {
         FileHashes.push(fileInformation.hash)
         moveToOutput(fileInformation)
     } else {
-        console.log('Duplicate:', fileInformation.full)
+        duplicateFile(fileInformation.full)
     }
+}
+
+
+// This function logs duplicates
+// Called from checkHistory and checkHistNoMeta
+function duplicateFile(full) {
+    console.log('Duplicate: ' + full)
+    FS.appendFileSync('duplicates.txt', 'Duplicate found: ' + full + '\n');
+    var originalName = full
+    var cutUp = originalName.split('\\')
+    var stringName = "E:\\OutPictureDuplicate\\" + cutUp[cutUp.length - 1]
+    // console.log(stringName)
+    copyFileSync(full, stringName)
+    console.log('Success: ' + cutUp[cutUp.length - 1])
 }
 
 // Copy file to new output folder if they are new and not duplicates.
@@ -107,7 +143,7 @@ function originalNameCopy(full) {
     var originalName = full
     var cutUp = originalName.split('\\')
     var stringName = "E:\\OutPictureOriginal\\" + cutUp[cutUp.length - 1]
-    console.log(stringName)
+    // console.log(stringName)
     copyFileSync(full, stringName)
     console.log('Success: ' + cutUp[cutUp.length - 1])
 }

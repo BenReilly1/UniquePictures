@@ -4,6 +4,7 @@ const Path = require("path");
 var ExifImage = require('exif').ExifImage;
 
 let Files  = [];
+
 // Gets all files, pushes found images into Files Array.
 // Called from main function
 function ThroughDirectory(Directory) { 
@@ -35,17 +36,22 @@ function checkFiletype(fileName) {
 }
 
 function extractMetadata(full) {
+    const meta = [];
     try {
         new ExifImage({ image : full }, function (error, exifData) {
             if (error) {
                 console.log('Error: '+error.message);
-            } else {
-                console.log(exifData.exif.CreateDate); // Do something with your data!
-            }
+            } 
+            hashFile(full, exifData.exif)
         });
     } catch (error) {
         console.log('Error: ' + error.message);
     }
+}
+
+function hashFile(full, meta) {
+    console.log(full)
+    console.log(meta.CreateDate)
 }
 
 function main() {

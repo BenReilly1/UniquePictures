@@ -68,31 +68,33 @@ function hashFile(full, meta) {
     if (meta === undefined) {
         checkHistNoMeta(full)
     } else {
-        imageHash(full, 16, true, (error, data) => {
-            if (error) throw error;
-            // console.log(data);
-            var fullInformation = {
-                full,
-                crtDate: meta.exif.CreateDate,
-                hash: data
-            }
-            checkHistory(fullInformation)
-        });
+        const fileBuffer = FS.readFileSync(full)
+        const hashSum = crypto.createHash('sha256');
+        hashSum.update(fileBuffer)
+        const hex = hashSum.digest('hex');
+        var fullInformation = {
+            full,
+            crtDate: meta.exif.CreateDate,
+            hash: hex
+        }
+        checkHistory(fullInformation)
     }
 }
 
 // Hashes and checks for previous hash.
 // Called from extractMegadata on errors
 function checkHistNoMeta(full) {
-    imageHash(full, 16, true, (error, data) => {
-        if (error) throw error;
-        var previousHash = FileHashes.includes(data)
-        if (!previousHash) {
-
-        } else {
-            duplicateFile(full)
-        }
-    });
+    const fileBuffer = FS.readFileSync(full)
+    const hashSum = crypto.createHash('sha256');
+    hashSum.update(fileBuffer)
+    const hex = hashSum.digest('hex');
+    var previousHash = FileHashes.includes(hex)
+    if (!previousHash) {
+        FileHashes.push(hex)
+        originalNameCopy(full)
+    } else {
+        duplicateFile(full)
+    }
 }
 
 // Checks history of the file, same create date and hashes. If it fails here it is duplicate
@@ -120,7 +122,6 @@ function duplicateFile(full) {
     var stringName = "E:\\OutPictureDuplicate\\" + cutUp[cutUp.length - 1]
     // console.log(stringName)
     copyFileSync(full, stringName)
-    console.log('Success: ' + cutUp[cutUp.length - 1])
 }
 
 // Copy file to new output folder if they are new and not duplicates.
@@ -129,12 +130,16 @@ function moveToOutput(fileInformation) {
     var getExtension = fileInformation.full.split('.')
     var extension = getExtension[getExtension.length - 1].toLowerCase()
     var crtDate = fileInformation.crtDate
-    var parsedDate = crtDate.split(':').join(' ')
-    var newName = parsedDate + "." + extension
-    var outputString = argv.output + "\\" + newName
-    copyFileSync(fileInformation.full, outputString)
-    // This is the original filenames saved 
-    originalNameCopy(fileInformation.full)
+    if (crtDate !== undefined) {
+        var parsedDate = crtDate.split(':').join(' ')
+        var newName = parsedDate + "." + extension
+        var outputString = argv.output + "\\" + newName
+        copyFileSync(fileInformation.full, outputString)
+        // This is the original filenames saved 
+        originalNameCopy(fileInformation.full)
+    } else {
+        originalNameCopy(fileInformation.full)
+    }
 }
 
 // This copies the file with original names
@@ -152,8 +157,14 @@ function main() {
     ThroughDirectory(argv.input);
     console.log(Files.length)
     for(var i = 0; i < Files.length; i++) {
-        extractMetadata(Files[i].full)
+        setTask(i)
     }
+}
+
+function setTask(i) {
+    setTimeout(function() {
+        extractMetadata(Files[i].full)
+    }, 100 * i);
 }
 
 main()

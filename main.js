@@ -46,13 +46,13 @@ function extractMetadata(full) {
         new ExifImage({ image : full }, function (error, exifData) {
             if (error) {
                 console.log('Error: '+error.message);
-                hashFile(full)
+                originalNameCopy(full)
             } 
-            hashFile(full, exifData.exif)
+            hashFile(full, exifData)
         });
     } catch (error) {
         console.log('Error: ' + error.message);
-        hashFile(full)
+        originalNameCopy(full)
     }
 }
 
@@ -66,7 +66,7 @@ function hashFile(full, meta) {
         // console.log(data);
         var fullInformation = {
             full,
-            crtDate: meta.CreateDate,
+            crtDate: meta.exif.CreateDate,
             hash: data
         }
         checkHistory(fullInformation)
@@ -97,6 +97,19 @@ function moveToOutput(fileInformation) {
     var newName = parsedDate + "." + extension
     var outputString = argv.output + "\\" + newName
     copyFileSync(fileInformation.full, outputString)
+    // This is the original filenames saved 
+    originalNameCopy(fileInformation.full)
+}
+
+// This copies the file with original names
+// Called from moveToOutput and extractMetaData
+function originalNameCopy(full) {
+    var originalName = full
+    var cutUp = originalName.split('\\')
+    var stringName = "E:\\OutPictureOriginal\\" + cutUp[cutUp.length - 1]
+    console.log(stringName)
+    copyFileSync(full, stringName)
+    console.log('Success: ' + cutUp[cutUp.length - 1])
 }
 
 function main() {

@@ -1,11 +1,13 @@
 const argv = require('yargs').argv
-const FS   = require("fs");
+const FS = require("fs");
 const Path = require("path");
 var ExifImage = require('exif').ExifImage;
 const { imageHash }= require('image-hash');
+const { copyFileSync } = require('fs')
 
 let Files  = [];
 let CreateDate = [];
+let FileHashes = [];
 
 // Gets all files, pushes found images into Files Array.
 // Called from main function
@@ -71,10 +73,30 @@ function hashFile(full, meta) {
     });
 }
 
-// Checks history of the file, same create date and hashes
+// Checks history of the file, same create date and hashes. If it fails here it is duplicate
 // Called from hashFile function
 function checkHistory(fileInformation) {
-    
+    var previousDate = CreateDate.includes(fileInformation.crtDate)
+    var previousHash = FileHashes.includes(fileInformation.hash)
+    if (!previousDate && !previousHash) {
+        CreateDate.push(fileInformation.crtDate)
+        FileHashes.push(fileInformation.hash)
+        moveToOutput(fileInformation)
+    } else {
+        console.log('Duplicate:', fileInformation.full)
+    }
+}
+
+// Copy file to new output folder if they are new and not duplicates.
+// Called from checkHistory function
+function moveToOutput(fileInformation) {
+    var getExtension = fileInformation.full.split('.')
+    var extension = getExtension[getExtension.length - 1].toLowerCase()
+    var crtDate = fileInformation.crtDate
+    var parsedDate = crtDate.split(':').join(' ')
+    var newName = parsedDate + "." + extension
+    var outputString = argv.output + "\\" + newName
+    copyFileSync(fileInformation.full, outputString)
 }
 
 function main() {

@@ -1,8 +1,7 @@
-const { readdirSync, copyFileSync } = require('fs')
 const argv = require('yargs').argv
 const FS   = require("fs");
 const Path = require("path");
-
+var ExifImage = require('exif').ExifImage;
 
 let Files  = [];
 // Gets all files, pushes found images into Files Array.
@@ -35,9 +34,26 @@ function checkFiletype(fileName) {
     return fileExtensions.includes(extension);
 }
 
+function extractMetadata(full) {
+    try {
+        new ExifImage({ image : full }, function (error, exifData) {
+            if (error) {
+                console.log('Error: '+error.message);
+            } else {
+                console.log(exifData.exif.CreateDate); // Do something with your data!
+            }
+        });
+    } catch (error) {
+        console.log('Error: ' + error.message);
+    }
+}
+
 function main() {
     ThroughDirectory(argv.input);
-    console.log(Files)
+    console.log(Files.length)
+    for(var i = 0; i < Files.length; i++) {
+        extractMetadata(Files[i].full)
+    }
 }
 
 main()
